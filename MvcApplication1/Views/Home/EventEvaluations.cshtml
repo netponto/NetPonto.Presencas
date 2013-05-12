@@ -1,0 +1,509 @@
+﻿@using MvcApplication1.Helpers
+@model MvcApplication1.Models.HomeEventEvaluationsViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Netponto Event Evaluations</title>
+
+    <script type='text/javascript' src='/scripts/knockout-2.1.0.js'></script>
+    <script type='text/javascript' src='/scripts/knockout.mapping-latest.js'></script>
+    <script type='text/javascript' src='/scripts/jquery-1.7.2.min.js'></script>
+    <script type='text/javascript' src='/scripts/eventbrite.jquery.js'></script>
+    <script type='text/javascript' src='/scripts/md5.js'></script>
+    <script type='text/javascript' src='/scripts/gravatar.jquery.js'></script>
+    <script type='text/javascript' src='/scripts/underscore.min.js'></script>
+    <script type='text/javascript' src='/scripts/helpers.js'></script>
+    <script type='text/javascript' src='/scripts/Models/event.js'></script>
+    <script type='text/javascript' src='/scripts/Models/eventbrite.js'></script>
+
+    <link rel="stylesheet" href="/Css/site.css" />
+
+    <script type='text/javascript'>
+        var pageViewModel;
+
+        var prime_focus_change_on_selects = function(parameters) {
+            $(".js_input_form select").change(function() {
+                var x = $(this).nextAll(".js_input_field");
+                if (x) {
+                    x[0].focus();
+                }
+            });
+        };
+        
+        ko.bindingHandlers.answerAsText = {
+            update: function (element, valueAccessor, allBindingsAccessor) {
+                // First get the latest data that we're bound to
+                var value = valueAccessor(), allBindings = allBindingsAccessor();
+
+                // Next, whether or not the supplied model property is observable, get its current value
+                var valueUnwrapped = ko.utils.unwrapObservable(value);
+
+                // Now manipulate the DOM element
+                if (valueUnwrapped == -1)
+                    $(element).text(""); // Make the element visible
+                else
+                    $(element).text(valueUnwrapped); // Make the element visible
+            }
+        };
+
+        var Attendee = function (json) {
+            if (!(this instanceof Attendee)) {
+                return new Attendee();
+            }
+            var self = this;
+            self.id = ko.observable(json.id);
+            self.order_id = ko.observable(json.order_id);
+            self.event_id = ko.observable(json.event_id);
+            self.first_name = ko.observable(json.first_name);
+            self.last_name = ko.observable(json.last_name);
+            self.email = ko.observable(json.email);
+
+            self.fullName = ko.computed($.proxy(function () {
+                return self.first_name() + " " + self.last_name();
+            }), this);
+
+            self.storage_key = ko.computed($.proxy(function () {
+                return self.event_id() + "_attendee_" + self.id();
+            }), this);
+
+            return self;
+        };
+
+        var Answer = function (json) {
+            if (!(this instanceof Answer)) {
+                return new Answer(json);
+            }
+            var self = this;
+            self.user = ko.observable(new Attendee(json.user || {}));
+            self.user_id = ko.observable(json.user_id || self.user().id());
+            
+            self.first_presentation_speaker = ko.observable(json.first_presentation_speaker || -1);
+            self.first_presentation_content = ko.observable(json.first_presentation_content || -1);
+            self.first_presentation_comments = ko.observable(json.first_presentation_comments || "");
+
+            self.second_presentation_speaker = ko.observable(json.second_presentation_speaker || -1);
+            self.second_presentation_content = ko.observable(json.second_presentation_content || -1);
+            self.second_presentation_comments = ko.observable(json.second_presentation_comments || "");
+
+            self.event_according_to_expectations = ko.observable(json.event_according_to_expectations || -1);
+            self.event_place = ko.observable(json.event_place || -1);
+            self.event_room = ko.observable(json.event_room || -1);
+            self.event_break = ko.observable(json.event_break || -1);
+            self.event_registration = ko.observable(json.event_registration || -1);
+            self.event_organization = ko.observable(json.event_organization || -1);
+            self.event_comments = ko.observable(json.event_comments || "");
+            return self;
+        };
+
+        var EventEvaluations = function(json) {
+            if(!(this instanceof EventEvaluations)) {
+                return new EventEvaluations(json);
+            }
+
+            var self = this;
+            self.version = ko.observable(json.version || json.version);
+            self.event_id = ko.observable(json.event_id || json.eventId);
+            self.event_title = ko.observable(json.event_title || json.eventTitle);
+            self.count = ko.observable(json.count || json.count);
+            self.creation_date = ko.observable(json.creation_date || json.creationDate);
+            return self;
+        };
+
+        var Form = function (pageViewModel, answer) {
+            if (!(this instanceof Form)) {
+                return new Form();
+            }
+            var self = this;
+            if (answer == undefined){
+                answer = new Answer({});
+            }
+            if (answer) {
+                self.answer = ko.observable(answer);
+            }
+
+            self.name = ko.observable("");
+
+            var filter_attendees_list_by_names = function (attendees, names) {
+                if (names.length == 0) return [];
+                
+                var possible_attendees = _.map(_.sortBy(_.filter(_.map(attendees,
+                    function(attendee) {
+                        return {
+                            attendee: attendee,
+                            count: _.filter(names, function(n) { return (attendee.fullName().toString()+" "+attendee.email().toString()).toLowerCase().indexOf(n) > -1; }).length
+                        };
+                    }),
+                    function(i) { return i.count == names.length; }),
+                    function(i) { return -i.count; }),
+                    function(i) { return i.attendee; });
+                return possible_attendees;
+            };
+
+            self.possible_names = ko.computed(function () {
+                var names = _.filter(self.name().toLowerCase().split(" "),
+                    function (s) { return s.trim() != ""; });
+
+                var possible_attendees = filter_attendees_list_by_names(pageViewModel.attendees(), names);
+                if(possible_attendees.length == 0) {
+                    possible_attendees = filter_attendees_list_by_names(pageViewModel.all_attendees(), names);
+                }
+                return possible_attendees;
+            });
+            
+            self.selected_name = ko.computed(function () {
+                if (self.possible_names().length > 0) {
+                    return self.possible_names()[0].fullName();
+                }
+                return undefined;
+            });
+
+
+            self.add = function () {
+                var flattened_answer = flatten_observable(self.answer());
+                flattened_answer.user = flatten_observable(self.possible_names()[0]);
+                flattened_answer.user_id = self.possible_names()[0].id();
+                pageViewModel.answers.push(new Answer(flattened_answer));
+                pageViewModel.save_data();
+                pageViewModel.form.answer(new Answer({}));
+                self.name("");
+                $("#form_name").focus();
+
+                prime_focus_change_on_selects();
+            };
+
+            return self;
+        };
+
+        $(function () {
+
+            var PageViewModel = function (extensions) {
+                var self = this;
+                extensions = extensions || [];
+                _.each(extensions, function (ext) { ext(self); });
+
+                self.event_id.subscribe(function (newValue) {
+                    self.load_attendees_from_storage();
+                    self.load_answers_from_storage();
+                });
+
+                self.attendees = ko.observableArray([]);
+                self.load_attendees_from_storage = function () {
+                    self.attendees.removeAll();
+                    var eventId = self.event_id();
+                    if (!eventId) return;
+
+                    var keyRe = eventId.toString() + "_attendee_.+";
+                    var attendees = [];
+                    for (var key in localStorage) {
+                        if (key.match(keyRe)) {
+                            attendees.push(new Attendee($.parseJSON(localStorage[key])));
+                        }
+                    }
+                    _.each(_.sortBy(attendees, function (attendee) { return attendee.fullName(); }),
+                        function (a) { self.attendees.push(a); });
+                };
+
+                self.all_attendees = ko.observableArray([]);
+                self.load_all_attendees_from_storage = function () {
+                    self.all_attendees.removeAll();
+
+                    var keyRe = "[0-9]+_attendee_.+";
+                    var attendees = [];
+                    for (var key in localStorage) {
+                        if (key.match(keyRe)) {
+                            attendees.push(new Attendee($.parseJSON(localStorage[key])));
+                        }
+                    }
+                    _.each(_.sortBy(attendees, function (attendee) { return attendee.fullName(); }),
+                        function (a) { self.all_attendees.push(a); });
+                };
+
+                self.status = ko.observable("ok");
+
+                
+                self.form = new Form(self, new Answer({}));
+
+                self.answers = ko.observableArray([]);
+                self.load_answers_from_storage = function() {
+                    self.answers.removeAll();
+                    var serializedAnswers = localStorage.getItem(self.event_id() + "_answers");
+                    if (serializedAnswers) {
+                        var answers = $.parseJSON(serializedAnswers);
+                        _.each(answers, function (e) { self.answers.push(new Answer(e)); });
+                    }
+                };
+
+                self.event_evaluations = ko.observableArray([]);
+                self.refresh_event_evaluations_data = function() {
+                    $.ajax({
+                        url: '/api/listeventevaluations',
+                        dataType: 'json'
+                    }).success(function (data, textStatus, jqXHR) {
+                        self.status("Have " + data.length + " evaluations.");
+                        self.event_evaluations.removeAll();
+                        _.each(data, function (e) { self.event_evaluations.push(new EventEvaluations(e)); });
+                    }).error(function () {
+                        self.status("Error refreshing event evaluations data:"+JSON.stringify(arguments));
+                    });
+                };
+
+                self.load_attendees_from_storage();
+                self.load_all_attendees_from_storage();
+                self.load_events_from_storage();
+                self.load_answers_from_storage();
+                
+                
+
+                self.refresh_attendees_data = function () {
+                    if (!self.eb_client) {
+                        self.status("client is not initialized iet");
+                        return;
+                    }
+                    self.status("loading data");
+
+                    self.eb_client.event_list_attendees({ 'id': self.event_id() }, function (response) {
+                        self.attendees.removeAll();
+                        for (var i = 0; i < response.attendees.length; i++) {
+                            var attendee = new Attendee(response.attendees[i].attendee);
+                            self.attendees.push(attendee);
+                            persist_attendee(attendee);
+                        }
+                        self.status(" " + response.attendees.length + " attendees loaded");
+                        self.load_all_attendees_from_storage();
+                    });
+                };
+
+                self.save_data = function() {
+                    persist_array(self.event_id() + "_answers", self.answers());
+                };
+
+                self.load_remote = function() {
+                    $.ajax({
+                        url: '/api/eventevaluations/' + self.event_id(),
+                        dataType: 'json'
+                    }).success(function (data, textStatus, jqXHR) {
+                        self.status("Loaded " + data.evaluations.length + " answers stored on " + data.creationDate);
+                        self.answers.removeAll();
+                        _.each(data.evaluations, function (e) { self.answers.push(new Answer(e)); });
+                        self.save_data();
+                    }).error(function () {
+                        self.status("error: " + arguments);
+                    });;
+                };
+
+                self.save_remote = function () {
+                    self.status("saving data to remote service");
+                    var data = JSON.stringify({
+                        EventId: self.event_id(),
+                        Event: flatten_observable(self.event()),
+                        Evaluations: flatten_observables(self.answers())
+                    });
+                    $.ajax({
+                        url: '/api/eventevaluations',
+                        type: 'POST',
+                        data: data,
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json"
+                    }).success(function (data, textStatus, jqXHR) {
+                        var result = data.result;
+                        self.status("saved remote event " + result.id + " with " + result.evaluations.length + " evaluations");
+                    }).error(function () {
+                        self.status("error: " + arguments);
+                    });
+                };
+            };
+            var configuration = {
+                eventbrite: {
+                    app_key: "@Model.EventBriteAppKey",
+                    user_key: "@Model.EventBriteUserKey",
+                }
+            };
+            pageViewModel = new PageViewModel([extend_with_eventbrite(configuration.eventbrite.app_key, configuration.eventbrite.user_key), extend_with_events, extend_with_event]);
+            ko.applyBindings(pageViewModel);
+
+            //pageViewModel.refresh_data();
+            $("#form_name").focus();
+           // yes, this is duplicated
+            prime_focus_change_on_selects();
+        });
+    </script>
+</head>
+<body>
+    <div>
+        <form>
+            <a href="#" data-bind="click:load_remote">load from remote service</a>
+            
+            <select data-bind="options:events, optionsText:'title', optionsValue:'id', value:event_id"></select>
+            <select data-bind="options:attendees, optionsText:'fullName', optionsValue:'id', value:'id'"></select>
+            <span data-bind="text:event_id"></span>
+            <a href="#" data-bind="click:refresh_events_data">refresh events</a>
+            <a href="#" data-bind="click:refresh_attendees_data">refresh attendees</a>
+            <a href="#" data-bind="click:refresh_event_evaluations_data">refresh event evaluations data</a>
+            &nbsp;
+            <a href="#" data-bind="click:save_remote">save to remote service</a>
+        </form>
+
+        <div class="status">
+            status: <span data-bind="text:status"></span>
+        </div>
+       
+
+
+        <form data-bind="with:form" class="js_input_form">
+            <input type="text" name="name" id="form_name" data-bind="value:name, valueUpdate:'keyup'" />
+            <ul data-bind="foreach: possible_names">
+                <li ><span data-bind="text: fullName"></span> (<span data-bind="text:email"></span>)</li>
+            </ul>
+            <span data-bind="text:selected_name"></span>
+
+            <span data-bind="with:answer">1st
+                <br />
+                Speaker : @Html.Rating1To9("first_presentation_speaker")
+                <br />
+                Content : @Html.Rating1To9("first_presentation_content")
+                <br />
+                Comments:
+                <textarea data-bind="value:first_presentation_comments" class="js_input_field" rows="3"></textarea>
+                <br />
+                2nd
+                <br />
+                Speaker : @Html.Rating1To9("second_presentation_speaker")
+                <br />
+                Content : @Html.Rating1To9("second_presentation_content")
+                <br />
+                Comments:
+                <textarea data-bind="value:second_presentation_comments" class="js_input_field" rows="3"></textarea>
+                <br />
+                Event classification<br />
+                Expectations : @Html.Rating1To4("event_according_to_expectations")
+                <br />
+                Place : @Html.Rating1To9("event_place")
+                <br />
+                Room : @Html.Rating1To9("event_room")
+                <br />
+                Break/Networking : @Html.Rating1To9("event_break")
+                <br />
+                Registration : @Html.Rating1To9("event_registration")
+                <br />
+                Organization : @Html.Rating1To9("event_organization")
+                <br />
+                Comments:
+                <textarea data-bind="value:event_comments" class="js_input_field" rows="3"></textarea>
+            </span>
+
+
+            <input type="button" value="add" data-bind="click: add" />
+        </form>
+        
+        <ul>
+            <li>
+                <a data-bind="attr: {'href':  '/api/eventevaluations/'+$data.event_id()+'/export?format=excel' }" target="_blank">export data</a>
+            </li>
+        </ul>
+        <table>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>User id</th>
+                    <th>Email</th>
+                    <th>1-Spk</th>
+                    <th>1-Cnt</th>
+                    <th>1-Cmts</th>
+                    <th>2-Spk</th>
+                    <th>2-Cnt</th>
+                    <th>2-Cmts</th>
+                    <th>Expt</th>
+                    <th>Plc</th>
+                    <th>Room</th>
+                    <th>Brk</th>
+                    <th>Reg</th>
+                    <th>Org</th>
+                    <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody data-bind="foreach:answers">
+                <tr>
+                    <td >
+                        <span data-bind="with:user">
+                            <span data-bind="text:fullName"></span>
+                        </span>
+                    </td>
+                    <td>
+                        <span data-bind="text:user_id"></span>
+                    </td>
+                    <td>
+                        <span data-bind="with:user">
+                            <span data-bind="text:email"></span>
+                        </span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:first_presentation_speaker"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:first_presentation_content"></span>
+                    </td>
+                    <td>
+                        <span data-bind="text:first_presentation_comments"></span>
+                    </td>                    
+                    <td>
+                        <span data-bind="answerAsText:second_presentation_speaker"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:second_presentation_content"></span>
+                    </td>
+                    <td>
+                        <span data-bind="text:second_presentation_comments"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_according_to_expectations"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_place"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_room"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_break"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_registration"></span>
+                    </td>
+                    <td>
+                        <span data-bind="answerAsText:event_organization"></span>
+                    </td>
+                    <td>
+                        <span data-bind="text:event_comments"></span>
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Title</th>
+                <th>Num. of Evals</th>
+                <th>Date</th>
+                <th>Version</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach:event_evaluations">
+            <tr>
+                <td data-bind="text:event_id"></td>
+                <td data-bind="text:event_title"></td>
+                <td data-bind="text:count"></td>
+                <td data-bind="text:creation_date"></td>
+                <td data-bind="text:version"></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

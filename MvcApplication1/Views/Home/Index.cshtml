@@ -1,0 +1,152 @@
+﻿@model MvcApplication1.Models.HomeIndexModel
+@using System.Web.Optimization
+@using MvcApplication1.Helpers
+
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Title</title>
+  
+        
+        @Scripts.Render("~/js/libs")
+
+        @Scripts.Render("~/js/ko")
+
+        @Scripts.Render("~/js/main")
+        
+        @Html.RenderSignalR();
+            
+        <link rel="stylesheet" href="/Css/site.css"/>
+        <script type="text/javascript">
+            var netponto_ns = {};
+            netponto_ns.configuration = {
+                eventbrite: {
+                    app_key : "@Model.EventBriteAppKey",
+                    user_key : "@Model.EventBriteUserKey",
+                }
+            };
+            $(function() {
+                netponto_ns.pageViewModel = indexPageViewModelBuilder($, ko, netponto_ns.configuration);
+            });
+            
+            
+        </script>
+
+    </head>
+    <body>
+        <div style="float:left;width:50px;position:fixed;height:100%;margin-right: 5px">
+
+            <span style="display:block; margin-bottom: 1%" class="atteendee_group_shortcut" >
+                <a href="#anchor_top">top</a>
+            </span>
+            <div data-bind=" foreach: grouped_attendees" style="height:99%" >
+                <span style="display:block; margin-bottom: 1%" class="atteendee_group_shortcut" >
+                    <a data-bind="attr:{href:'#group'+group()}, text:group"  style="height: 100%"></a><br/>
+                </span>
+            </div>
+            <span style="display:block; margin-bottom: 1%" class="atteendee_group_shortcut" >
+                <a href="#anchor_bottom">bottom</a>
+            </span>
+        </div>
+        <div style="margin-left: 60px">
+            <a id="anchor_top"></a>
+            <form >
+                <!-- <input  type="checkbox"  data-bind="value: keep_focus_on_filter">keep focus on filter?</input> -->
+                <select data-bind="options:events, optionsText:'title', optionsValue:'id', value:event_id"></select>
+                present: <strong><span data-bind="text:number_attendees_present"></span></strong>/<span data-bind="text:number_attendees"></span>,
+                for lunch: <span data-bind="text:number_attendees_for_lunch"></span>
+            </form>
+            <div>
+                <input placeholder="unregistered attendee" data-bind="value: unregistered_attendee, valueUpdate: 'afterkeydown'" id="unregistered_attendee"/>
+                <span data-bind="click:add_unregistered_attendee" class="line_command_button"> add unregistered</span>
+            </div>
+
+            <div data-bind=" template: {name:'attendeeGroupTemplate', foreach: grouped_attendees }" class="atteendee_group">
+            
+            </div>
+            
+            <a id="anchor_bottom"></a>
+
+            <div>
+                <div  class="status">
+                    status: <span data-bind="text:status"></span>
+                </div>
+                event: <span data-bind="text:event_id"></span>  <span data-bind="text: event.date"></span>
+                <div>
+                    <span data-bind="click: refresh_events_data " class="large_button_command" >
+                        <span style="font-size: xx-large">refresh events data</span>
+                    </span>
+            
+                    <span data-bind="click: refresh_attendees_data " class="large_button_command" >
+                        <span style="font-size: xx-large">refresh attendees data</span>
+                    </span>
+               
+           
+                    <span data-bind="click: save_remote " style="float:right" class="large_button_command" >
+                        <span style="font-size: xx-large">save data remotely</span>
+                    </span>
+                
+                </div>
+                <div>
+                    <a data-bind="attr:{href:export_event_attendees_link}">
+                        <span class="large_button_command" >
+                            <span style="font-size: xx-large">download latest registered attendee list from server</span>
+                        </span>
+                    </a>
+                </div>
+                <div>
+                    Download format:<br/>
+                    <select data-bind="options: export_event_attendees_formats, optionsText:'name', optionsValue:'format', value: export_event_attendees_selected_format">
+                    </select>
+                </div>
+                <div>
+                    <span data-bind="click: nuke_all_local_data " class="large_button_command" >
+                        <span style="font-size: xx-large">nuke local </span>
+                        <span style="font-size: xx-large" data-bind="text:localStorage.length"></span>
+                        <span style="font-size: xx-large" > items</span>
+                    </span>
+            
+                    <span data-bind="click: nuke_status " class="large_button_command" >
+                        <span style="font-size: x-large">nuke status for event</span>
+                        <span style="font-size: x-large" data-bind="text:event_id"></span>
+                    </span>
+                </div>
+                <div>
+                    <input name="local_user_name" data-bind="value:local_user_name"/>
+                </div>
+            </div>
+            <span id="js_page_events"></span>
+            <a href="/login.aspx">login/logout</a>
+        </div>
+        <script type="text/html" id="attendeeGroupTemplate">
+            <div>
+                <a data-bind="attr:{id:'group'+group()}">
+                    <span data-bind="text:group()"></span>
+                </a>
+
+                <div data-bind=" template: {name:'attendeeTemplate', foreach: attendees }" class="attendees">
+            
+                </div>
+            </div>
+        </script>
+
+        <script type="text/html" id="attendeeTemplate">
+            <div class="atteendee" data-bind="presentAsClass: present, click: toggle, event : { touchstart: toggle } " >
+                <img data-bind="attr: {src: gravatarUrl }"  />
+                <div class="atteendee_info">
+                    <span class="present" data-bind="visible: present" >present </span>
+                    <span class="lunch"  data-bind="visible: joins_for_lunch">lunch </span>
+                    <br/>
+                    <span class="fullname" data-bind="text: fullName"></span>
+                </div>
+
+            </div>
+        </script>
+    </body>
+</html>

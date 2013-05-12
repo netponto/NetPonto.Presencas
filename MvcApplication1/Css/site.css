@@ -1,0 +1,14 @@
+﻿.large_button_command { display: inline-block; width: 120px;margin: 20px;padding: 10px;background-color: lightblue; text-align: center}
+.line_command_button { display: inline-block; width: 120px;margin: 10px;padding: 10px;background-color: lightblue; text-align: center}
+
+.atteendee_info { width: 120px;}
+.atteendee { width: 120px; margin-bottom: 10px; display: inline-block }
+.atteendee img{ display: block;clear:right; horiz-align: center;margin-left: auto;margin-right: auto;}
+.atteendee span{ width: 100%;margin-left: auto;margin-right: auto;text-align: center; }
+.atteendee .fullname{width: 120px;margin-left: auto;margin-right: auto;text-align: center; }
+
+.status { font-size: large}
+
+.atteendee_group_shortcut { text-align: center;font-size: x-large; background: lightgray}
+
+.atteendee.present { background-color: lightgreen;}
