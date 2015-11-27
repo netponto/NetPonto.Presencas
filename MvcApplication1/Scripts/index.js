@@ -6,9 +6,9 @@
     self.id = ko.observable(json.id);
     self.order_id = ko.observable(json.order_id);
     self.event_id = ko.observable(json.event_id);
-    self.first_name = ko.observable(json.first_name);
-    self.last_name = ko.observable(json.last_name);
-    self.email = ko.observable(json.email);
+    self.first_name = ko.observable(json.first_name || json.profile.first_name);
+    self.last_name = ko.observable(json.last_name || json.profile.last_name);
+    self.email = ko.observable(json.email || json.profile.email);
     self.present = ko.observable(json.present || false);
     self.joins_for_lunch = ko.observable(json.joins_for_lunch || false);
 
@@ -200,8 +200,8 @@ var indexPageViewModelBuilder = function ($, ko, conf) {
 
         self.grouped_attendees = ko.computed(function() {
 
-            var items = _.map(_.groupBy(self.attendees(),
-                    function(item) { return item.fullName().toLowerCase()[0]; }),
+            var items = _.sortBy(_.map(_.groupBy(self.attendees(),
+                function(item) { return item.fullName().toLowerCase()[0]; }),
                 function(items) {
                     return function() {
                         var s = {};
@@ -209,7 +209,8 @@ var indexPageViewModelBuilder = function ($, ko, conf) {
                         s.attendees = ko.observable(items);
                         return s;
                     }();
-                });
+                }),
+                function(item) { return item.group(); });
             if (items.length > 0) {
                 $(".atteendee_group_shortcut").css("height", Math.floor(100 / (items.length + 2)) + "%");
             }
@@ -228,7 +229,7 @@ var indexPageViewModelBuilder = function ($, ko, conf) {
                 self.eb_client.event_list_attendees({ 'id': self.event_id() }, function(response) {
                     self.attendees.removeAll();
                     for (var i = 0; i < response.attendees.length; i++) {
-                        var attendee = new Attendee(response.attendees[i].attendee);
+                        var attendee = new Attendee(response.attendees[i]);
                         self.attendees.push(attendee);
                         persist_attendee(attendee);
                     }
@@ -307,7 +308,7 @@ var indexPageViewModelBuilder = function ($, ko, conf) {
         });
     };
 
-    var pageViewModel = new PageViewModel([extend_with_eventbrite(conf.eventbrite.app_key,conf.eventbrite.user_key), extend_with_events, extend_with_event]);
+    var pageViewModel = new PageViewModel([extend_with_eventbrite(conf.eventbrite.oauth_token), extend_with_events, extend_with_event]);
 
     ko.applyBindings(pageViewModel);
     return pageViewModel;

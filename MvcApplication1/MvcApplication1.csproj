@@ -24,6 +24,13 @@
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
     <JSLintSkip>\Scripts\gravatar.jquery.js|\Scripts\jquery-1.7.2.js|\Scripts\json2.js|\Scripts\knockout-2.1.0.debug.js|\Scripts\knockout-2.1.0.js|\Scripts\knockout.mapping-latest.debug.js|\Scripts\knockout.mapping-latest.js|\Scripts\md5.js|\Scripts\underscore.js|\Scripts\eventbrite.jquery.js|\Scripts\index.js|\Scripts\helpers.js|\Scripts\Models\event.js|\Scripts\Models\eventbrite.js</JSLintSkip>
+    <MvcProjectUpgradeChecked>true</MvcProjectUpgradeChecked>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>4.0</OldToolsVersion>
+    <UseGlobalApplicationHostFile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -182,7 +189,6 @@
   <ItemGroup>
     <Compile Include="App_Start\AppHost.cs" />
     <Compile Include="Controllers\HomeController.cs" />
-    <Compile Include="Models\HomeEventEvaluationsViewModel.cs" />
     <Compile Include="ReadOnlyXmlMembershipProvider.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -232,7 +238,6 @@
     <Content Include="Scripts\libs\knockout-2.2.1.js" />
     <Content Include="Scripts\libs\knockout.mapping-latest.debug.js" />
     <Content Include="Scripts\libs\knockout.mapping-latest.js" />
-    <Content Include="Scripts\libs\eventbrite.jquery.js" />
     <Content Include="Scripts\helpers.js" />
     <Content Include="Scripts\index.js" />
     <Content Include="Scripts\libs\gravatar.jquery.js" />
@@ -251,7 +256,6 @@
     </Content>
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Web.config" />
-    <Content Include="Views\Home\EventEvaluations.cshtml" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

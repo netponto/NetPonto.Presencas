@@ -5,8 +5,10 @@ var Event = function (json) {
         return new Event();
     }
     var self = this;
+    // yea, I know, this sucks. we should have a separate "builder" from persistend and eventbrite data
+    var title = json.title || json.name.text;
     self.id = ko.observable(json.id);
-    self.title = ko.observable(json.title);
+    self.title = ko.observable(title);
     self.date = ko.observable(json.date);
 
     return self;
@@ -33,8 +35,8 @@ var extend_with_events = function(self) {
             self.events.removeAll();
 
             var orderedEvents = response.events.sort(function (a, b) {
-                var aDate = parse_date_from_eventbrite(a.event.start_date);
-                var bDate = parse_date_from_eventbrite(b.event.start_date);
+                var aDate = parse_date_from_eventbrite(a.start.local);
+                var bDate = parse_date_from_eventbrite(b.start.local);
                 if (aDate > bDate)
                     return -1;
                 if (aDate < bDate)
@@ -42,8 +44,8 @@ var extend_with_events = function(self) {
                 return 0;
             });
             for (var i = 0; i < orderedEvents.length; i++) {
-                var event = orderedEvents[i].event;
-                event.date = parse_date_from_eventbrite(event.start_date);
+                var event = orderedEvents[i];
+                event.date = parse_date_from_eventbrite(event.start.local);
                 self.events.push(new Event(event));
             }
             self.status(" " + response.events.length + " events loaded");
