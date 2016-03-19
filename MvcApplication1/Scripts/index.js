@@ -6,8 +6,8 @@
     self.id = ko.observable(json.id);
     self.order_id = ko.observable(json.order_id);
     self.event_id = ko.observable(json.event_id);
-    self.first_name = ko.observable(json.first_name || json.profile.first_name);
-    self.last_name = ko.observable(json.last_name || json.profile.last_name);
+    self.first_name = ko.observable(json.first_name || (json.profile && json.profile.first_name) || "");
+    self.last_name = ko.observable(json.last_name || (json.profile && json.profile.last_name) || "");
     self.email = ko.observable(json.email || json.profile.email);
     self.present = ko.observable(json.present || false);
     self.joins_for_lunch = ko.observable(json.joins_for_lunch || false);
